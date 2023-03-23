@@ -1,0 +1,30 @@
+{
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: gcc.exe compila il file attivo",
+            "command": "C:/msys64/mingw64/bin/gcc.exe",
+            "args": [
+                "-Wall",
+                "-fdiagnostics-color=always",
+                "-g",
+                "C:\\Users\\fabri\\source\\2Chip8\\main.c",
+                "C:\\Users\\fabri\\source\\2Chip8\\cpu.c",
+                "-lmingw32",                
+                "-lSDL2main",
+                "-lSDL2",
+                "-o",
+                "${fileDirname}\\main.exe"
+            ],
+            "options": {
+                "cwd": "C:/msys64/mingw64/bin"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "Attività generata dal debugger."
+        }
+    ],
+    "version": "2.0.0"
+}

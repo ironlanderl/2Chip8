@@ -6,54 +6,57 @@ int randomBool()
 }
 
 uint16_t GetKeyBit(SDL_Event* event){
-    // Convert 1234qwerasdfzxcv to a single bit in a 16 bit number
+    // Convert 1234qwerasdfzxcv to an index
     switch (event->key.keysym.sym)
     {
     case SDLK_1:
-        return 0x0001;
+        return 0;
     case SDLK_2:
-        return 0x0002;
+        return 1;
     case SDLK_3:
-        return 0x0004;
+        return 2;
     case SDLK_4:
-        return 0x0008;
+        return 3;
     case SDLK_q:
-        return 0x0010;
+        return 4;
     case SDLK_w:
-        return 0x0020;
+        return 5;
     case SDLK_e:
-        return 0x0040;
+        return 6;
     case SDLK_r:
-        return 0x0080;
+        return 7;
     case SDLK_a:
-        return 0x0100;
+        return 8;
     case SDLK_s:
-        return 0x0200;
+        return 9;
     case SDLK_d:
-        return 0x0400;
+        return 10;
     case SDLK_f:
-        return 0x0800;
+        return 11;
     case SDLK_z:
-        return 0x1000;
+        return 12;
     case SDLK_x:
-        return 0x2000;
+        return 13;
     case SDLK_c:
-        return 0x4000;
+        return 14;
     case SDLK_v:
-        return 0x8000;
+        return 15;
     default:
-        return 0x0000;
+        return 0;
     }
 }
 
 
+
 int main(int argc, char *argv[])
 {
-    char *filename = "c:\\Users\\fabri\\Downloads\\chip8-test-suite.ch8";
-    // char* filename = "C:\\Users\\fabri\\source\\2Chip8\\ibm.ch8";
-    LoadRom(filename);
-    LoadFont();
+    //char *filename = "c:\\Users\\fabri\\Downloads\\chip8-test-suite.ch8";
+    // char* filename = "C:\\Users\\fabri\\source\\2Chip8\\roms\\ibm.ch8";
+    char* filename = "C:\\path\\chip81.ch8";
     InitializeScreen();
+    InitializeOtherStuff();
+    LoadRom(filename);
+    
 
     SDL_Window *window = SDL_CreateWindow("2Chip8",
                                           SDL_WINDOWPOS_UNDEFINED,
@@ -77,8 +80,9 @@ int main(int argc, char *argv[])
         {
             switch (e.type)
             {
+            case SDL_KEYUP:
             case SDL_KEYDOWN:
-
+                KeyPressed(GetKeyBit(&e));
                 break;
             case SDL_QUIT:
                 running = 0;
@@ -102,6 +106,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
+        update_timers();
         MainLoop();
         SDL_RenderPresent(renderer);
     }

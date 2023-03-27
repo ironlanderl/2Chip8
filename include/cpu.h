@@ -5,6 +5,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
+#include <time.h>   // For time()
+
+#define TIMER_FREQUENCY 60 //HZ
+
 
 #define LUNGHEZZA 64
 #define ALTEZZA 32
@@ -19,4 +23,7 @@ void MainLoop();
 void Fetch();
 void Execute();
 
-void KeyChange(uint16_t key);
+void KeyPressed(uint16_t key);
+
+void InitializeOtherStuff();
+void update_timers();

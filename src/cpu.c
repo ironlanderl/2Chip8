@@ -4,11 +4,15 @@ uint8_t RAM[4096];
 uint16_t PC = 0x200;
 uint16_t I;
 uint8_t V[16];
-uint16_t stack[USHRT_MAX];
+uint16_t stack[16];
 uint16_t stack_top = 0;
 char instruction[256];
 uint16_t opcode;
-uint16_t keyboard;
+bool keys[16];
+
+uint8_t delay_timer;
+uint8_t sound_timer;
+time_t timer_last_update;
 
 uint64_t cycles = 0;
 
@@ -78,7 +82,12 @@ void InitializeScreen()
 void InitializeOtherStuff()
 {
     memset(&RAM, 0, sizeof(RAM));
-    RAM[0x1FF] = 0x2;
+    memset(&V, 0, sizeof(V));
+    memset(&stack, 0, sizeof(stack));
+    memset(&keys, false, sizeof(keys));
+    LoadFont();
+    srand(time(NULL)); // Seed the random number generator with current time
+    //RAM[0x1FF] = 0x2;
 }
 
 void MainLoop()
@@ -90,7 +99,7 @@ void MainLoop()
 void Fetch()
 {
     opcode = RAM[PC] << 8 | RAM[PC + 1];
-    printf("%X: %X - %X\n", PC, RAM[PC], RAM[PC + 1]);
+    // printf("%X: %X - %X\n", PC, RAM[PC], RAM[PC + 1]);
     PC += 2;
     cycles++;
 }
@@ -105,14 +114,30 @@ void Execute()
     uint16_t NNN = opcode & 0x0FFF;
 
     printf("A: %X, X: %X, Y: %X, N: %X, NN: %X, NNN: %X\n", A, X, Y, N, NN, NNN);
+    // print all keys state in one line
+    for (int i = 0; i < 16; i++)
+    {
+        printf("%d ", keys[i]);
+    }
+    printf("\n");
 
     switch (A)
     {
     case 0x0:
-        if (opcode == 0x00E0)
+        switch (NN)
+        {
+        case 0xE0:
             InitializeScreen();
-        if (opcode == 0x00EE)
-            PC = stack[stack_top--];
+            break;
+        case 0xEE:
+            stack_top--;
+            PC = stack[stack_top];
+            break;
+        default:
+            printf("Undefined Opcode: %X%X%X%X\n", A, X, Y, N);
+            exit(-1);
+            break;
+        }
         break;
     case 0x1:
         PC = NNN;
@@ -121,8 +146,20 @@ void Execute()
         stack[stack_top++] = PC;
         PC = NNN;
         break;
+    case 0x3:
+        if (V[X] == NN)
+        {
+            PC += 2;
+        }
+        break;
     case 0x4:
         if (V[X] != NN)
+        {
+            PC += 2;
+        }
+        break;
+    case 0x5:
+        if (V[X] == V[Y])
         {
             PC += 2;
         }
@@ -133,10 +170,64 @@ void Execute()
     case 0x7:
         V[X] += NN;
         break;
+    case 8:
+        switch (N)
+        {
+        case 0:
+            V[X] = V[Y];
+            break;
+        case 1:
+            V[X] = V[X] | V[Y];
+            break;
+        case 2:
+            V[X] = V[X] & V[Y];
+            break;
+        case 3:
+            V[X] = V[X] ^= V[Y];
+            break;
+        case 4:
+            // Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there is not.
+            V[0xF] = (V[X] + V[Y] > 255) ? 1 : 0;
+            V[X] += V[Y];
+            break;
+        case 5:
+            // VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there is not.
+            V[0xF] = (V[X] > V[Y]) ? 0 : 1;
+            V[X] -= V[Y];
+            break;
+        case 6:
+            // Save LSB
+            V[0xF] = V[X] & 1;
+            // Move V[X] to the right
+            V[X] >>= 1;
+            break;
+        case 7:
+            V[0xF] = (V[X] < V[Y]) ? 1 : 0;
+            V[X] = V[Y] - V[X];
+            break;
+        case 0xE:
+            V[0xF] = V[X] & 0b10000000;
+            // Move V[X] to the left
+            V[X] <<= 1;
+            break;
+        default:
+            printf("Undefined Opcode: %X%X%X%X\n", A, X, Y, N);
+            break;
+        }
+        break;
+    case 0x9:
+        if (V[X] != V[Y])
+            PC += 2;
+        break;
     case 0xA:
         I = NNN;
         break;
-
+    case 0xB:
+        PC = V[0] + NNN;
+        break;
+    case 0xC:
+        V[X] = rand() % 256 & NN;
+        break;
     case 0xD:
     {
         // debugger;
@@ -179,15 +270,70 @@ void Execute()
     break;
 
     case 0xE:
-        
+        switch (NN)
+        {
+        case 0x9E:
+            if (keys[V[X]])
+                PC += 2;
+            break;
+        case 0xA1:
+            if (!keys[V[X]])
+                PC += 2;
+            break;
+        }
+        break;
 
     case 0xF:
-        if (NN == 0x65)
+        switch (NN)
         {
-            for (size_t i = 0; i < X; i++)
+        case 0x07:
+            V[X] = delay_timer;
+            break;
+        case 0xA:
+            uint16_t key = -1;
+            for (int i = 0; i < 0x16; i++)
             {
-                V[X] = RAM[I + i];
+                if (keys[i])
+                {
+                    key = i;
+                    break;
+                }
             }
+            if (key == -1)
+            {
+                PC -= 2;
+                break;
+            }
+            V[X] = key;
+            break;
+        case 0x15:
+            delay_timer = V[X];
+            break;
+        case 0x18:
+            sound_timer = V[X];
+            break;
+        case 0x1E:
+            I += V[X];
+            break;
+        case 0x29:
+            I = V[X] * 5;
+            break;
+        case 0x55:
+            for (size_t i = 0; i <= X; i++)
+            {
+                RAM[I + i] = V[X];
+            }
+            break;
+        case 0x65:
+            for (size_t i = 0; i <= X; i++)
+            {
+                V[i] = RAM[I + i];
+            }
+            break;
+        default:
+            printf("Undefined Opcode: %X%X%X%X\n", A, X, Y, N);
+            exit(-1);
+            break;
         }
         break;
 
@@ -198,7 +344,43 @@ void Execute()
     }
 }
 
-void KeyChange(uint16_t key)
+void KeyPressed(uint16_t index)
 {
-    keyboard = keyboard ^ key;
+    // Xor the keys[index] with true
+    keys[index] ^= true;
+}
+
+void update_timers()
+{
+    // Get the current time
+    time_t current_time = time(NULL);
+
+    // Calculate the elapsed time since the last update
+    double elapsed_time = difftime(current_time, timer_last_update);
+
+    // Calculate the number of timer decrements that should have happened in the elapsed time
+    int decrements = elapsed_time * TIMER_FREQUENCY;
+
+    // Decrement the delay timer
+    if (delay_timer > 0)
+    {
+        delay_timer -= decrements;
+        if (delay_timer < 0)
+            delay_timer = 0;
+    }
+
+    // Decrement the sound timer
+    if (sound_timer > 0)
+    {
+        sound_timer -= decrements;
+        if (sound_timer < 0)
+            sound_timer = 0;
+    }
+
+    // Update the last update time
+    timer_last_update = current_time;
+
+    // Make the computer "beep" if the sound timer is above 0
+    if (sound_timer > 0)
+        printf("\a");
 }

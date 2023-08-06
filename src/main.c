@@ -109,9 +109,9 @@ int main(int argc, char *argv[])
 
         if (NeedToRefresh())
         {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
             SDL_RenderClear(renderer);
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
 
             bool screen[ALTEZZA][LUNGHEZZA];
             GetScreen(screen);

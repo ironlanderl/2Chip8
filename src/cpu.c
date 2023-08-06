@@ -14,7 +14,7 @@ uint8_t delay_timer;
 uint8_t sound_timer;
 time_t timer_last_update;
 
-uint64_t cycles = 0;
+//uint64_t cycles = 0;
 
 bool screen[ALTEZZA][LUNGHEZZA];
 
@@ -101,7 +101,7 @@ void Fetch()
     opcode = RAM[PC] << 8 | RAM[PC + 1];
     // printf("%X: %X - %X\n", PC, RAM[PC], RAM[PC + 1]);
     PC += 2;
-    cycles++;
+    //cycles++;
 }
 
 void Execute()
@@ -121,6 +121,8 @@ void Execute()
     }
     printf("\n");
 
+    bool shouldSet;
+    
     switch (A)
     {
     case 0x0:
@@ -186,29 +188,35 @@ void Execute()
             V[X] = V[X] ^= V[Y];
             break;
         case 4:
-            // Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there is not.
-            V[0xF] = (V[X] + V[Y] > 255) ? 1 : 0;
+            shouldSet = (V[X] + V[Y] > 255) ? 1 : 0;
             V[X] += V[Y];
+            // Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there is not.
+            V[0xF] = shouldSet;
             break;
         case 5:
-            // VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there is not.
-            V[0xF] = (V[X] > V[Y]) ? 0 : 1;
+            shouldSet = (V[X] > V[Y]) ? 1 : 0;
             V[X] -= V[Y];
+            // VY is subtracted from VX. VF is set to 1 when there's a borrow, and 0 when there is not.
+            V[0xF] = shouldSet;
             break;
         case 6:
-            // Save LSB
-            V[0xF] = V[X] & 1;
+            uint8_t lsb = V[X] & 0b1;
             // Move V[X] to the right
             V[X] >>= 1;
+            // Save LSB
+            V[0xF] = lsb;
             break;
         case 7:
-            V[0xF] = (V[X] < V[Y]) ? 1 : 0;
             V[X] = V[Y] - V[X];
+            V[0xF] = (V[X] < V[Y]) ? 1 : 0;
             break;
         case 0xE:
-            V[0xF] = V[X] & 0b10000000;
+            uint8_t msb = V[X] & 0b10000000;
+            // Move the msb bit to be the first
+            msb >>= 7;
             // Move V[X] to the left
             V[X] <<= 1;
+            V[0xF] = msb;
             break;
         default:
             printf("Undefined Opcode: %X%X%X%X\n", A, X, Y, N);
@@ -395,18 +403,4 @@ void update_timers()
     // Make the computer "beep" if the sound timer is above 0
     if (sound_timer > 0)
         printf("\a");
-}
-
-int convertToBCD(int number)
-{
-    int bcdResult = 0;
-    int shift = 0;
-
-    while (number > 0)
-    {
-        bcdResult |= (number % 10) << (shift++ << 2);
-        number /= 10;
-    }
-
-    return bcdResult;
 }

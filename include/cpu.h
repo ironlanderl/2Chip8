@@ -5,8 +5,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
-#include <time.h>   // For time()
+#include <signal.h>
+#include <time.h>
+#include <sys/time.h>
 
+#define EMULATOR_FREQUENCY 500  // Desired frequency in Hz
 #define TIMER_FREQUENCY 60 //HZ
 
 

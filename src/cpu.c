@@ -87,7 +87,7 @@ void InitializeOtherStuff()
     memset(&keys, false, sizeof(keys));
     LoadFont();
     srand(time(NULL)); // Seed the random number generator with current time
-    //RAM[0x1FF] = 0x2;
+    // RAM[0x1FF] = 0x2;
 }
 
 void MainLoop()
@@ -318,10 +318,22 @@ void Execute()
         case 0x29:
             I = V[X] * 5;
             break;
+        case 0x33:
+            uint8_t value = V[X];
+            // Extract the BCD digits
+            uint8_t hundreds = value / 100;
+            uint8_t tens = (value / 10) % 10;
+            uint8_t ones = value % 10;
+
+            // Store the BCD digits in memory
+            RAM[I] = hundreds;
+            RAM[I + 1] = tens;
+            RAM[I + 2] = ones;
+            break;
         case 0x55:
             for (size_t i = 0; i <= X; i++)
             {
-                RAM[I + i] = V[X];
+                RAM[I + i] = V[i];
             }
             break;
         case 0x65:
@@ -383,4 +395,18 @@ void update_timers()
     // Make the computer "beep" if the sound timer is above 0
     if (sound_timer > 0)
         printf("\a");
+}
+
+int convertToBCD(int number)
+{
+    int bcdResult = 0;
+    int shift = 0;
+
+    while (number > 0)
+    {
+        bcdResult |= (number % 10) << (shift++ << 2);
+        number /= 10;
+    }
+
+    return bcdResult;
 }

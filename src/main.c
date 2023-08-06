@@ -5,6 +5,10 @@ int randomBool()
     return rand() % 2;
 }
 
+void timer_handler(int signum) {
+    MainLoop();
+}
+
 uint16_t GetKeyBit(SDL_Event* event){
     // Convert 1234qwerasdfzxcv to an index
     switch (event->key.keysym.sym)
@@ -52,7 +56,7 @@ int main(int argc, char *argv[])
 {
     //char *filename = "c:\\Users\\fabri\\Downloads\\chip8-test-suite.ch8";
     // char* filename = "C:\\Users\\fabri\\source\\2Chip8\\roms\\ibm.ch8";
-    char* filename = "C:\\path\\chip81.ch8";
+    char* filename = "/home/ironlanderl/src/2Chip8/roms/4-flags.ch8";
     InitializeScreen();
     InitializeOtherStuff();
     LoadRom(filename);
@@ -72,6 +76,20 @@ int main(int argc, char *argv[])
 
     SDL_RenderSetIntegerScale(renderer, SDL_TRUE);
     SDL_RenderSetScale(renderer, 10, 10);
+
+    struct sigaction sa;
+    struct itimerval timer;
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = &timer_handler;
+    sigaction(SIGALRM, &sa, NULL);
+
+    // Configure the timer to interrupt at the desired frequency
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_usec = 1000000 / EMULATOR_FREQUENCY;
+    timer.it_interval = timer.it_value;
+    setitimer(ITIMER_REAL, &timer, NULL);
+
     int running = 1;
     while (running)
     {
@@ -107,7 +125,7 @@ int main(int argc, char *argv[])
             }
         }
         update_timers();
-        MainLoop();
+        //MainLoop();
         SDL_RenderPresent(renderer);
     }
 

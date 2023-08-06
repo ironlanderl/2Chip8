@@ -5,22 +5,24 @@ int randomBool()
     return rand() % 2;
 }
 
-void timer_handler(int signum) {
+void main_loop_handler(int signum)
+{
     MainLoop();
 }
 
-uint16_t GetKeyBit(SDL_Event* event){
+uint16_t GetKeyBit(SDL_Event *event)
+{
     // Convert 1234qwerasdfzxcv to an index
     switch (event->key.keysym.sym)
     {
     case SDLK_1:
-        return 0;
-    case SDLK_2:
         return 1;
-    case SDLK_3:
+    case SDLK_2:
         return 2;
-    case SDLK_4:
+    case SDLK_3:
         return 3;
+    case SDLK_4:
+        return 0xC;
     case SDLK_q:
         return 4;
     case SDLK_w:
@@ -28,39 +30,34 @@ uint16_t GetKeyBit(SDL_Event* event){
     case SDLK_e:
         return 6;
     case SDLK_r:
-        return 7;
+        return 0xD;
     case SDLK_a:
-        return 8;
+        return 7;
     case SDLK_s:
-        return 9;
+        return 8;
     case SDLK_d:
-        return 10;
+        return 9;
     case SDLK_f:
-        return 11;
+        return 0xE;
     case SDLK_z:
-        return 12;
+        return 0xA;
     case SDLK_x:
-        return 13;
+        return 0;
     case SDLK_c:
-        return 14;
+        return 0xB;
     case SDLK_v:
-        return 15;
+        return 0xF;
     default:
         return 0;
     }
 }
 
-
-
 int main(int argc, char *argv[])
 {
-    //char *filename = "c:\\Users\\fabri\\Downloads\\chip8-test-suite.ch8";
-    // char* filename = "C:\\Users\\fabri\\source\\2Chip8\\roms\\ibm.ch8";
-    char* filename = "/home/ironlanderl/src/2Chip8/roms/4-flags.ch8";
+    char *filename = "/home/ironlanderl/src/2Chip8/roms/br8kout.ch8";
     InitializeScreen();
     InitializeOtherStuff();
     LoadRom(filename);
-    
 
     SDL_Window *window = SDL_CreateWindow("2Chip8",
                                           SDL_WINDOWPOS_UNDEFINED,
@@ -81,7 +78,7 @@ int main(int argc, char *argv[])
     struct itimerval timer;
 
     memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = &timer_handler;
+    sa.sa_handler = &main_loop_handler;
     sigaction(SIGALRM, &sa, NULL);
 
     // Configure the timer to interrupt at the desired frequency
@@ -98,35 +95,40 @@ int main(int argc, char *argv[])
         {
             switch (e.type)
             {
-            case SDL_KEYUP:
             case SDL_KEYDOWN:
                 KeyPressed(GetKeyBit(&e));
+                break;
+            case SDL_KEYUP:
+                KeyReleased(GetKeyBit(&e));
                 break;
             case SDL_QUIT:
                 running = 0;
                 break;
             }
         }
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
-        bool screen[ALTEZZA][LUNGHEZZA];
-        GetScreen(screen);
-
-        for (int i = 0; i < 32; i++)
+        if (NeedToRefresh())
         {
-            for (int j = 0; j < 64; j++)
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+            bool screen[ALTEZZA][LUNGHEZZA];
+            GetScreen(screen);
+            for (int i = 0; i < 32; i++)
             {
-                if (screen[i][j])
+                for (int j = 0; j < 64; j++)
                 {
-                    SDL_RenderDrawPoint(renderer, j, i);
+                    if (screen[i][j])
+                    {
+                        SDL_RenderDrawPoint(renderer, j, i);
+                    }
                 }
             }
+            SDL_RenderPresent(renderer);
         }
         update_timers();
-        //MainLoop();
-        SDL_RenderPresent(renderer);
+        // MainLoop();
     }
 
     return 0;

@@ -16,6 +16,16 @@ time_t timer_last_update;
 
 //uint64_t cycles = 0;
 
+bool needToRefresh = false;
+
+bool NeedToRefresh(){
+    if (needToRefresh){
+        needToRefresh = false;
+        return true;
+    }
+    return needToRefresh;
+}
+
 bool screen[ALTEZZA][LUNGHEZZA];
 
 void GetScreen(bool *output)
@@ -81,10 +91,12 @@ void InitializeScreen()
 
 void InitializeOtherStuff()
 {
-    memset(&RAM, 0, sizeof(RAM));
-    memset(&V, 0, sizeof(V));
-    memset(&stack, 0, sizeof(stack));
-    memset(&keys, false, sizeof(keys));
+    delay_timer = 0;
+    sound_timer = 0;
+    memset(&RAM, 0, sizeof(RAM)); // Clean ram
+    memset(&V, 0, sizeof(V)); // Clean registers
+    memset(&stack, 0, sizeof(stack)); // Clean stack
+    memset(&keys, false, sizeof(keys)); // Clean keyboard
     LoadFont();
     srand(time(NULL)); // Seed the random number generator with current time
     // RAM[0x1FF] = 0x2;
@@ -120,6 +132,7 @@ void Execute()
         printf("%d ", keys[i]);
     }
     printf("\n");
+    printf("Delay timer: %i\t Sound timer: %s\n", delay_timer, sound_timer);
 
     bool shouldSet;
     
@@ -238,6 +251,8 @@ void Execute()
         break;
     case 0xD:
     {
+        // fermo il refresh
+        needToRefresh = false;
         // debugger;
         //  Prendo le coordinate dove disegnare
         int x = V[X] % LUNGHEZZA;
@@ -274,6 +289,7 @@ void Execute()
                 }
             }
         }
+        needToRefresh = true;
     }
     break;
 
@@ -297,9 +313,9 @@ void Execute()
         case 0x07:
             V[X] = delay_timer;
             break;
-        case 0xA:
-            uint16_t key = -1;
-            for (int i = 0; i < 0x16; i++)
+        case 0x0A:
+            int key = -1;
+            for (int i = 0; i < 16; i++)
             {
                 if (keys[i])
                 {
@@ -367,24 +383,21 @@ void Execute()
 void KeyPressed(uint16_t index)
 {
     // Xor the keys[index] with true
-    keys[index] ^= true;
+    keys[index] = true;
+}
+
+void KeyReleased(uint16_t index)
+{
+    // Xor the keys[index] with true
+    keys[index] = false;
 }
 
 void update_timers()
 {
-    // Get the current time
-    time_t current_time = time(NULL);
-
-    // Calculate the elapsed time since the last update
-    double elapsed_time = difftime(current_time, timer_last_update);
-
-    // Calculate the number of timer decrements that should have happened in the elapsed time
-    int decrements = elapsed_time * TIMER_FREQUENCY;
-
     // Decrement the delay timer
     if (delay_timer > 0)
     {
-        delay_timer -= decrements;
+        delay_timer --;
         if (delay_timer < 0)
             delay_timer = 0;
     }
@@ -392,13 +405,10 @@ void update_timers()
     // Decrement the sound timer
     if (sound_timer > 0)
     {
-        sound_timer -= decrements;
+        sound_timer --;
         if (sound_timer < 0)
             sound_timer = 0;
     }
-
-    // Update the last update time
-    timer_last_update = current_time;
 
     // Make the computer "beep" if the sound timer is above 0
     if (sound_timer > 0)

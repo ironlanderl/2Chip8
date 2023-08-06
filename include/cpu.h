@@ -12,11 +12,11 @@
 #define EMULATOR_FREQUENCY 500  // Desired frequency in Hz
 #define TIMER_FREQUENCY 60 //HZ
 
-
 #define LUNGHEZZA 64
 #define ALTEZZA 32
 
 void GetScreen(bool* output);
+bool NeedToRefresh();
 void InitializeScreen();
 
 void LoadRom(char *filename);
@@ -27,6 +27,7 @@ void Fetch();
 void Execute();
 
 void KeyPressed(uint16_t key);
+void KeyReleased(uint16_t index);
 
 void InitializeOtherStuff();
 void update_timers();

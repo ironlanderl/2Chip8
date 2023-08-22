@@ -1,13 +1,36 @@
 #include "cpu.h"
 
+int clocks = 8;
+
 int randomBool()
 {
     return rand() % 2;
 }
 
-void main_loop_handler(int signum)
-{
-    MainLoop();
+long long current_timestamp() {
+    struct timeval te; 
+    gettimeofday(&te, NULL); // get current time
+    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+    // printf("milliseconds: %lld\n", milliseconds);
+    return milliseconds;
+}
+
+void handleHotkeys(SDL_Event *event){
+    switch (event->key.keysym.sym)
+    {
+    case SDLK_F2:
+        clocks++;
+        break;
+    case SDLK_F1:
+        if (clocks > 1)
+        {
+            clocks--;
+        }
+        break;
+    default:
+        break;
+    }
+
 }
 
 uint16_t GetKeyBit(SDL_Event *event)
@@ -48,7 +71,7 @@ uint16_t GetKeyBit(SDL_Event *event)
     case SDLK_v:
         return 0xF;
     default:
-        return 0;
+        return NULL;
     }
 }
 
@@ -74,22 +97,21 @@ int main(int argc, char *argv[])
     SDL_RenderSetIntegerScale(renderer, SDL_TRUE);
     SDL_RenderSetScale(renderer, 10, 10);
 
-    struct sigaction sa;
-    struct itimerval timer;
-
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = &main_loop_handler;
-    sigaction(SIGALRM, &sa, NULL);
-
-    // Configure the timer to interrupt at the desired frequency
-    timer.it_value.tv_sec = 0;
-    timer.it_value.tv_usec = 1000000 / EMULATOR_FREQUENCY;
-    timer.it_interval = timer.it_value;
-    setitimer(ITIMER_REAL, &timer, NULL);
-
     int running = 1;
+    long long lastTime, startTime;
     while (running)
     {
+
+        // https://www.reddit.com/r/EmuDev/comments/en0s6t/chip8_500_hz_feels_too_fast/
+        startTime = current_timestamp();
+        for (int i = 0; i < clocks; i++)
+        {
+            MainLoop();
+        }
+
+        update_timers();
+
+
         SDL_Event e;
         while (SDL_PollEvent(&e))
         {
@@ -97,9 +119,11 @@ int main(int argc, char *argv[])
             {
             case SDL_KEYDOWN:
                 KeyPressed(GetKeyBit(&e));
+                handleHotkeys(&e);
                 break;
             case SDL_KEYUP:
                 KeyReleased(GetKeyBit(&e));
+                handleHotkeys(&e);
                 break;
             case SDL_QUIT:
                 running = 0;
@@ -127,8 +151,14 @@ int main(int argc, char *argv[])
             }
             SDL_RenderPresent(renderer);
         }
-        update_timers();
-        // MainLoop();
+
+        long long elapsed = current_timestamp() - startTime;
+
+        SDL_Delay((1.0/60)*1000 - elapsed);
+        char title[256];
+        sprintf(title, "2Chip8 - Clocks: %d", clocks);
+        SDL_SetWindowTitle(window, title);
+        
     }
 
     return 0;

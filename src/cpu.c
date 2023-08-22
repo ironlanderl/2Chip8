@@ -383,13 +383,15 @@ void Execute()
 void KeyPressed(uint16_t index)
 {
     // Xor the keys[index] with true
-    keys[index] = true;
+    if (index != NULL)
+        keys[index] = true;
 }
 
 void KeyReleased(uint16_t index)
 {
     // Xor the keys[index] with true
-    keys[index] = false;
+    if (index != NULL)
+        keys[index] = false;
 }
 
 void update_timers()
